@@ -40,6 +40,9 @@ public class Merchant {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank(message = "Phone number is required")
+    @Column(unique = true, nullable = false)
+    @Pattern(regexp = "^[0-9]{10}$", message = "Invalid phone number format")
     private String phone;
 
     @Column(name = "is_active", nullable = false)
