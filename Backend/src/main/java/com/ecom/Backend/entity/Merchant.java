@@ -45,6 +45,10 @@ public class Merchant {
     @Pattern(regexp = "^[0-9]{10}$", message = "Invalid phone number format")
     private String phone;
 
+    @NotBlank(message = "Password hash is required")
+    @Column(name = "password_hash", nullable = true)
+    private String passwordHash;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
