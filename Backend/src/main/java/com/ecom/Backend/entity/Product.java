@@ -24,6 +24,14 @@ public class Product {
 
     private Long merchantId; // Denormalized for quick filtering
 
+    private String name;
+    
+    private Double price;
+    
+    private String description;
+    
+    private String category;
+
     private Map<String, Object> attributes;
 
     private List<Variant> variants;

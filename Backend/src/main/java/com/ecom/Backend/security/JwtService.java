@@ -17,10 +17,10 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret:9a4f2c8d3b7a1e5f8c6b3a2d1e0f9c8b7a6d5c4b3a2e1d0f9c8b7a6d5c4b3a2e}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expiration:86400000}") // 1 day in milliseconds
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     public String extractEmail(String token) {
