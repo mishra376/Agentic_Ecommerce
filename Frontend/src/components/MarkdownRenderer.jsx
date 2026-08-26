@@ -1,10 +1,22 @@
 import React from 'react';
+import ProductCard from './ProductCard';
 
 export default function MarkdownRenderer({ text }) {
   if (!text) return null;
 
   // Split by code blocks: ```[lang]\n[code]\n```
   const parts = text.split(/(```[\s\S]*?```)/g);
+
+  // Extract any product IDs from product links (/api/products/{id})
+  const productIds = [];
+  const productRegex = /\/api\/products\/([a-zA-Z0-9_-]+)/g;
+  let match;
+  while ((match = productRegex.exec(text)) !== null) {
+    const id = match[1];
+    if (!productIds.includes(id)) {
+      productIds.push(id);
+    }
+  }
 
   return (
     <div className="markdown-content">
@@ -78,24 +90,71 @@ export default function MarkdownRenderer({ text }) {
           return <React.Fragment key={index}>{renderedLines}</React.Fragment>;
         }
       })}
+
+      {/* Dynamic Product Catalog listings below search result */}
+      {productIds.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-white/5 text-left">
+          <span className="text-[0.72rem] font-bold text-[#71717a] uppercase tracking-wider block mb-2 select-none">
+            Database Catalog Results
+          </span>
+          <div className="flex flex-col gap-3">
+            {productIds.map((id) => (
+              <ProductCard key={id} id={id} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Simple inline parser for **bold** and `code`
+// Inline parser for **bold**, `code`, and [link text](url)
 function parseInline(text) {
-  // Regex to split by bold (**text**) and inline code (`text`)
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  // Regex to split by bold (**text**), inline code (`text`), and markdown links ([text](url))
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`|\[[^\]]+\]\([^)]+\))/g);
 
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={index} className="font-bold text-white">{part.slice(2, -2)}</strong>;
     } else if (part.startsWith('`') && part.endsWith('`')) {
       return (
-        <code key={index} className="font-mono bg-black/45 text-xs px-1.5 py-0.5 rounded text-[#6366f1] font-semibold border border-white/5">
+        <code key={index} className="font-mono bg-black/45 text-xs px-1.5 py-0.5 rounded text-[#818cf8] font-semibold border border-white/5">
           {part.slice(1, -1)}
         </code>
       );
+    } else if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+      const match = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (match) {
+        const linkText = match[1];
+        const url = match[2];
+
+        // Style product links cleaner
+        if (url.startsWith('/api/products/')) {
+          return (
+            <a
+              key={index}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#818cf8] hover:underline font-semibold"
+            >
+              {linkText}
+            </a>
+          );
+        }
+
+        return (
+          <a
+            key={index}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#818cf8] hover:underline font-medium"
+          >
+            {linkText}
+          </a>
+        );
+      }
     }
     return part;
   });
