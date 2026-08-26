@@ -32,6 +32,8 @@ public class Product {
     
     private String category;
 
+    private Integer stock;
+
     private Map<String, Object> attributes;
 
     private List<Variant> variants;

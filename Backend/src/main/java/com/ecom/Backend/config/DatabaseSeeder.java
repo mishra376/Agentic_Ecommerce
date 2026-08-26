@@ -29,6 +29,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             p1.setPrice(99000.0);
             p1.setDescription("Apple MacBook Air laptop with M2 chip, 8GB RAM, 256GB SSD, and 13.6-inch Liquid Retina Display.");
             p1.setCategory("Laptop");
+            p1.setStock(50);
             p1.setAttributes(new HashMap<>());
             p1.setVariants(new ArrayList<>());
             p1.setImages(new ArrayList<>());
@@ -43,6 +44,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             p2.setPrice(169000.0);
             p2.setDescription("Apple MacBook Pro laptop with M3 chip, 16GB Unified Memory, 512GB SSD, and Liquid Retina XDR Display.");
             p2.setCategory("Laptop");
+            p2.setStock(30);
             p2.setAttributes(new HashMap<>());
             p2.setVariants(new ArrayList<>());
             p2.setImages(new ArrayList<>());
@@ -57,6 +59,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             p3.setPrice(78000.0);
             p3.setDescription("Gaming laptop with AMD Ryzen 7 5800H processor, NVIDIA GeForce RTX 3060, 16GB RAM, and 512GB SSD.");
             p3.setCategory("Laptop");
+            p3.setStock(25);
             p3.setAttributes(new HashMap<>());
             p3.setVariants(new ArrayList<>());
             p3.setImages(new ArrayList<>());
@@ -71,6 +74,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             p4.setPrice(79000.0);
             p4.setDescription("Apple iPhone 15 smartphone with 128GB storage, A16 Bionic chip, and 48MP Advanced Camera system.");
             p4.setCategory("Smartphone");
+            p4.setStock(40);
             p4.setAttributes(new HashMap<>());
             p4.setVariants(new ArrayList<>());
             p4.setImages(new ArrayList<>());
@@ -85,6 +89,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             p5.setPrice(29999.0);
             p5.setDescription("Sony over-ear wireless headphones with industry-leading noise cancellation, 30-hour battery life, and Alexa built-in.");
             p5.setCategory("Headphones");
+            p5.setStock(60);
             p5.setAttributes(new HashMap<>());
             p5.setVariants(new ArrayList<>());
             p5.setImages(new ArrayList<>());
