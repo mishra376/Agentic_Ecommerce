@@ -10,6 +10,7 @@ import com.ecom.Backend.repository.ProductRepo;
 import com.ecom.Backend.repository.UserRepo;
 import com.ecom.Backend.entity.Address;
 import com.ecom.Backend.repository.AddressRepo;
+import com.razorpay.RazorpayClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class OrderServices {
     private final ProductRepo productRepo;
     private final UserRepo userRepo;
     private final AddressRepo addressRepo;
+    private final RazorpayClient razorpayClient;
 
     @Transactional
     public Order placeOrder(Long userId, OrderRequest request) {
@@ -78,15 +80,37 @@ public class OrderServices {
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
+        boolean isRazorpay = "RAZORPAY".equalsIgnoreCase(request.getPaymentMethod());
+
         // First flush to PostgreSQL to trigger constraint/DB failures before modifying MongoDB
         Order savedOrder = orderRepo.saveAndFlush(order);
 
-        // Deduct MongoDB stock since DB save succeeded
-        for (int i = 0; i < request.getItems().size(); i++) {
-            Product product = productsToUpdate.get(i);
-            int orderQty = request.getItems().get(i).getQuantity();
-            product.setStock(product.getStock() - orderQty);
-            productRepo.save(product);
+        if (isRazorpay) {
+            // Create Razorpay Order but do not deduct stock yet (deducted upon successful payment verification)
+            try {
+                org.json.JSONObject options = new org.json.JSONObject();
+                long amountInPaise = Math.round(savedOrder.getTotalAmount() * 100);
+                options.put("amount", amountInPaise);
+                options.put("currency", "INR");
+                options.put("receipt", "order_rcpt_" + savedOrder.getId());
+                
+                com.razorpay.Order rzpOrder = razorpayClient.orders.create(options);
+                String rzpOrderId = rzpOrder.get("id");
+                
+                savedOrder.setRazorpayOrderId(rzpOrderId);
+                savedOrder = orderRepo.save(savedOrder);
+            } catch (Exception e) {
+                // Fail order creation if Razorpay API call fails (forces transaction rollback)
+                throw new RuntimeException("Failed to generate Razorpay order: " + e.getMessage(), e);
+            }
+        } else {
+            // Deduct MongoDB stock since DB save succeeded for non-Razorpay payment methods (e.g. COD)
+            for (int i = 0; i < request.getItems().size(); i++) {
+                Product product = productsToUpdate.get(i);
+                int orderQty = request.getItems().get(i).getQuantity();
+                product.setStock(product.getStock() - orderQty);
+                productRepo.save(product);
+            }
         }
 
         return savedOrder;

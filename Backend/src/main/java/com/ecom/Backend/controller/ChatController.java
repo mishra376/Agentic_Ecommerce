@@ -103,11 +103,16 @@ public class ChatController {
                 orderRequest.setItems(dtoList);
 
                 Order order = orderServices.placeOrder(userDetails.getId(), orderRequest);
-                return "Success! Order placed successfully. Order ID: " + order.getId() 
+                String response = "Success! Order placed successfully. Order ID: " + order.getId() 
                        + ", Total Amount: " + order.getTotalAmount() 
                        + ", Shipped to: " + order.getShippingAddress() 
                        + ", Payment Method: " + order.getPaymentMethod() 
                        + ", Status: " + order.getStatus() + ".";
+                if ("RAZORPAY".equalsIgnoreCase(order.getPaymentMethod()) && order.getRazorpayOrderId() != null) {
+                    response += " Please complete your payment using Razorpay Order ID: " + order.getRazorpayOrderId() 
+                             + ". The client should launch checkout and invoke verify API `/api/payment/verify` upon completion.";
+                }
+                return response;
             } catch (Exception e) {
                 return "Error: Failed to place order. " + e.getMessage();
             }

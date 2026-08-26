@@ -41,6 +41,15 @@ public class Order {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+    @Column(name = "razorpay_order_id")
+    private String razorpayOrderId;
+
+    @Column(name = "razorpay_payment_id")
+    private String razorpayPaymentId;
+
+    @Column(name = "razorpay_signature")
+    private String razorpaySignature;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderItem> orderItems = new ArrayList<>();
 
