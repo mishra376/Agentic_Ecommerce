@@ -35,10 +35,9 @@ export default function App() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ message: 'ping' })
+      fetch('/api/chat/health', {
+        method: 'GET',
+        headers: headers
       })
       .then((res) => {
         if (res.ok) {
@@ -138,17 +137,36 @@ export default function App() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      // Convert existing messages to role/content pairs for AI context memory
+      const currentHistory = (activeSession?.messages || []).map((msg) => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
+      console.log('🤖 [Frontend Chat] Sending message to backend:', {
+        message: trimmed,
+        historyCount: currentHistory.length
+      });
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ message: trimmed })
+        body: JSON.stringify({
+          message: trimmed,
+          history: currentHistory
+        })
       });
 
+      console.log('🤖 [Frontend Chat] HTTP response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`Server returned status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ [Frontend Chat] Server error response:', errorText);
+        throw new Error(`Server returned status: ${response.status} (${errorText})`);
       }
 
       const data = await response.json();
+      console.log('✅ [Frontend Chat] Received AI response:', data);
       setIsTyping(false);
 
       const assistantMsg = {
@@ -162,6 +180,7 @@ export default function App() {
         )
       );
     } catch (err) {
+      console.error('❌ [Frontend Chat] Chat request failed:', err);
       setIsTyping(false);
       
       const errorHtml = `### ⚠️ Connection Failed

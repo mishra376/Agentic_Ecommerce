@@ -42,7 +42,7 @@ public class ProductServices {
                     if (category != null && !category.trim().isEmpty()) {
                         String cat = category.toLowerCase().trim();
                         String pCat = p.getCategory() != null ? p.getCategory().toLowerCase() : "";
-                        if (!pCat.contains(cat)) {
+                        if (!pCat.contains(cat) && !cat.contains(pCat)) {
                             return false;
                         }
                     }
@@ -50,8 +50,33 @@ public class ProductServices {
                         String q = query.toLowerCase().trim();
                         String name = p.getName() != null ? p.getName().toLowerCase() : "";
                         String desc = p.getDescription() != null ? p.getDescription().toLowerCase() : "";
-                        if (!name.contains(q) && !desc.contains(q)) {
-                            return false;
+                        String pCat = p.getCategory() != null ? p.getCategory().toLowerCase() : "";
+                        String combinedText = name + " " + desc + " " + pCat;
+
+                        // Check full query match first
+                        if (combinedText.contains(q)) {
+                            // match found
+                        } else {
+                            // Check individual keywords with singular/plural support
+                            String[] keywords = q.split("\\s+");
+                            boolean allKeywordsMatch = true;
+                            for (String kw : keywords) {
+                                if (kw.isEmpty()) continue;
+                                boolean matched = combinedText.contains(kw);
+                                if (!matched && kw.endsWith("s") && kw.length() > 3) {
+                                    matched = combinedText.contains(kw.substring(0, kw.length() - 1));
+                                }
+                                if (!matched && kw.endsWith("es") && kw.length() > 4) {
+                                    matched = combinedText.contains(kw.substring(0, kw.length() - 2));
+                                }
+                                if (!matched) {
+                                    allKeywordsMatch = false;
+                                    break;
+                                }
+                            }
+                            if (!allKeywordsMatch) {
+                                return false;
+                            }
                         }
                     }
                     if (maxPrice != null) {

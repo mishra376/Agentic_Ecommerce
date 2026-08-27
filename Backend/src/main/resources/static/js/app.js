@@ -92,13 +92,22 @@ document.addEventListener('DOMContentLoaded', () => {
             renderHistorySidebar();
         }
 
+        // History before this new message
+        const historyPayload = messagesList.slice(0, -1).map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text
+        }));
+
         // Call backend API
         fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({
+                message: text,
+                history: historyPayload
+            })
         })
         .then(response => {
             if (!response.ok) {

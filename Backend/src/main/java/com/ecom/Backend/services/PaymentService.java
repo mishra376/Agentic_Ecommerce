@@ -126,4 +126,50 @@ public class PaymentService {
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepo.save(payment);
     }
+
+    /**
+     * Called when the user confirms payment inside the chat.
+     * Reuses the existing ACID transactional stock deduction and payment logging.
+     */
+    public String completeConversationalPayment(Long orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+
+        // Build a mock verification request using the stored Razorpay Order ID
+        PaymentVerificationRequest mockRequest = new PaymentVerificationRequest();
+        mockRequest.setOrderId(orderId);
+        mockRequest.setRazorpayOrderId(order.getRazorpayOrderId());
+        mockRequest.setRazorpayPaymentId("chat_pay_" + orderId + "_" + System.currentTimeMillis());
+        mockRequest.setRazorpaySignature("conversational_confirmed");
+
+        try {
+            // Transactionally update order to PAID and deduct MongoDB stock (ACID)
+            completeOrderAndDeductStock(order, mockRequest);
+            // Log payment success in a new transaction
+            savePaymentTransaction(orderId, mockRequest, "SUCCESS", null, order.getTotalAmount());
+            return "SUCCESS";
+        } catch (Exception e) {
+            // If stock fails or any error, log failure and cancel order
+            handlePaymentFailure(orderId, mockRequest, e.getMessage(), order.getTotalAmount());
+            throw new RuntimeException("Payment completion failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Called when the user declines payment inside the chat.
+     * Marks order as CANCELLED and logs the payment as FAILED without any stock deduction.
+     */
+    public String cancelConversationalPayment(Long orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+
+        PaymentVerificationRequest mockRequest = new PaymentVerificationRequest();
+        mockRequest.setOrderId(orderId);
+        mockRequest.setRazorpayOrderId(order.getRazorpayOrderId());
+        mockRequest.setRazorpayPaymentId(null);
+        mockRequest.setRazorpaySignature(null);
+
+        handlePaymentFailure(orderId, mockRequest, "User declined payment in chat", order.getTotalAmount());
+        return "CANCELLED";
+    }
 }
