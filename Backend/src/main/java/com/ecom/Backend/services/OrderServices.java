@@ -37,6 +37,7 @@ public class OrderServices {
         Order order = new Order();
         order.setUser(user);
         order.setOrderDate(LocalDateTime.now());
+        // Status will be set based on payment method after save
         order.setStatus("PENDING");
 
         String shippingAddress = request.getShippingAddress();
@@ -111,6 +112,9 @@ public class OrderServices {
                 product.setStock(product.getStock() - orderQty);
                 productRepo.save(product);
             }
+            // Mark order as PLACED after successful stock deduction
+            savedOrder.setStatus("PLACED");
+            savedOrder = orderRepo.save(savedOrder);
         }
 
         return savedOrder;

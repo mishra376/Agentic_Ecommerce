@@ -138,10 +138,17 @@ export default function App() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      // Get current messages for the active session to send as history
+      const currentSession = chatSessions.find((s) => s.id === activeSessionId);
+      const historyMessages = currentSession ? currentSession.messages.map(m => ({
+        sender: m.sender,
+        text: m.text
+      })) : [];
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ message: trimmed })
+        body: JSON.stringify({ message: trimmed, history: historyMessages })
       });
 
       if (!response.ok) {
