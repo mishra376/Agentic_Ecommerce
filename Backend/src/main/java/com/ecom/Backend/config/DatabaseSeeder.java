@@ -96,7 +96,127 @@ public class DatabaseSeeder implements CommandLineRunner {
             p5.setUpdatedAt(LocalDateTime.now());
             productRepo.save(p5);
 
-            System.out.println(">>> Database seeding completed. 5 products saved.");
+            Product p6 = new Product();
+            p6.setId("macbook-extended-warranty");
+            p6.setProductId(106L);
+            p6.setMerchantId(1L);
+            p6.setName("AppleCare+ Extended Warranty for MacBook (2 Years)");
+            p6.setPrice(14900.0);
+            p6.setDescription("Extend your MacBook warranty by 2 additional years. Covers hardware repairs, accidental damage (up to 2 incidents), and battery replacement if capacity falls below 80%.");
+            p6.setCategory("Warranty & Protection");
+            p6.setStock(999);
+            p6.setAttributes(new HashMap<>());
+            p6.setVariants(new ArrayList<>());
+            p6.setImages(new ArrayList<>());
+            p6.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p6);
+
+            Product p7 = new Product();
+            p7.setId("macbook-hard-case");
+            p7.setProductId(107L);
+            p7.setMerchantId(1L);
+            p7.setName("MacBook Hard Plastic Protective Case (Clear Matte)");
+            p7.setPrice(1499.0);
+            p7.setDescription("Snap-on hard plastic shell case for MacBook Air/Pro 13-14 inch. Crystal clear matte finish, scratch-resistant, ventilated bottom for heat dissipation. Slim profile, does not add bulk.");
+            p7.setCategory("Laptop Accessories");
+            p7.setStock(120);
+            p7.setAttributes(new HashMap<>());
+            p7.setVariants(new ArrayList<>());
+            p7.setImages(new ArrayList<>());
+            p7.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p7);
+
+            Product p8 = new Product();
+            p8.setId("usb-c-hub-7in1");
+            p8.setProductId(108L);
+            p8.setMerchantId(2L);
+            p8.setName("7-in-1 USB-C Hub Adapter");
+            p8.setPrice(2499.0);
+            p8.setDescription("USB-C multiport adapter with HDMI 4K@60Hz, 2× USB-A 3.0, USB-C PD 100W pass-through charging, SD/TF card reader, and Gigabit Ethernet. Compatible with MacBook, Dell XPS, and all USB-C laptops.");
+            p8.setCategory("Laptop Accessories");
+            p8.setStock(80);
+            p8.setAttributes(new HashMap<>());
+            p8.setVariants(new ArrayList<>());
+            p8.setImages(new ArrayList<>());
+            p8.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p8);
+
+            Product p9 = new Product();
+            p9.setId("ergonomic-laptop-stand");
+            p9.setProductId(109L);
+            p9.setMerchantId(2L);
+            p9.setName("Aluminium Ergonomic Laptop Stand");
+            p9.setPrice(3999.0);
+            p9.setDescription("Premium aluminium laptop stand with adjustable height and angle. Raises screen to eye level for better posture. Anti-slip silicone pads, supports laptops up to 17 inches. Foldable and portable.");
+            p9.setCategory("Laptop Accessories");
+            p9.setStock(55);
+            p9.setAttributes(new HashMap<>());
+            p9.setVariants(new ArrayList<>());
+            p9.setImages(new ArrayList<>());
+            p9.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p9);
+
+            Product p10 = new Product();
+            p10.setId("wireless-mouse-logitech");
+            p10.setProductId(110L);
+            p10.setMerchantId(2L);
+            p10.setName("Logitech MX Master 3S Wireless Mouse");
+            p10.setPrice(8999.0);
+            p10.setDescription("Advanced wireless mouse with MagSpeed electromagnetic scroll, 8K DPI sensor, USB-C quick charging, quiet clicks, and multi-device support via Bluetooth or USB receiver. Works on any surface including glass.");
+            p10.setCategory("Laptop Accessories");
+            p10.setStock(70);
+            p10.setAttributes(new HashMap<>());
+            p10.setVariants(new ArrayList<>());
+            p10.setImages(new ArrayList<>());
+            p10.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p10);
+
+            Product p11 = new Product();
+            p11.setId("iphone-screen-protector");
+            p11.setProductId(111L);
+            p11.setMerchantId(2L);
+            p11.setName("iPhone 15 Tempered Glass Screen Protector (2-Pack)");
+            p11.setPrice(499.0);
+            p11.setDescription("9H hardness tempered glass screen protector for iPhone 15. Edge-to-edge coverage, anti-fingerprint oleophobic coating, bubble-free installation. Includes alignment frame and cleaning kit.");
+            p11.setCategory("Phone Accessories");
+            p11.setStock(200);
+            p11.setAttributes(new HashMap<>());
+            p11.setVariants(new ArrayList<>());
+            p11.setImages(new ArrayList<>());
+            p11.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p11);
+
+            Product p12 = new Product();
+            p12.setId("iphone-silicone-case");
+            p12.setProductId(112L);
+            p12.setMerchantId(2L);
+            p12.setName("Apple iPhone 15 Silicone Case — Midnight");
+            p12.setPrice(3999.0);
+            p12.setDescription("Official Apple silicone case for iPhone 15. Soft-touch exterior with microfiber lining for added protection. Supports MagSafe wireless charging. Available in Midnight color.");
+            p12.setCategory("Phone Accessories");
+            p12.setStock(90);
+            p12.setAttributes(new HashMap<>());
+            p12.setVariants(new ArrayList<>());
+            p12.setImages(new ArrayList<>());
+            p12.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p12);
+
+            Product p13 = new Product();
+            p13.setId("laptop-backpack");
+            p13.setProductId(113L);
+            p13.setMerchantId(1L);
+            p13.setName("Premium Laptop Backpack — Water Resistant (15.6 inch)");
+            p13.setPrice(2799.0);
+            p13.setDescription("Durable water-resistant laptop backpack with padded compartment for up to 15.6-inch laptops. Features USB charging port, anti-theft hidden zipper, organizer pockets, and breathable back panel. Ideal for commuters and travelers.");
+            p13.setCategory("Laptop Accessories");
+            p13.setStock(100);
+            p13.setAttributes(new HashMap<>());
+            p13.setVariants(new ArrayList<>());
+            p13.setImages(new ArrayList<>());
+            p13.setUpdatedAt(LocalDateTime.now());
+            productRepo.save(p13);
+
+            System.out.println(">>> Database seeding completed. 13 products saved.");
         } else {
             System.out.println(">>> Database already has " + productRepo.count() + " products. Skipping seeding.");
         }
