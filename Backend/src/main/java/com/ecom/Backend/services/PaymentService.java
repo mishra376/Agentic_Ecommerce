@@ -108,6 +108,26 @@ public class PaymentService {
     }
 
     /**
+     * Explicitly report a client-side payment failure or modal dismissal.
+     * Marks order as FAILED / CANCELLED without touching MongoDB stock.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reportPaymentFailure(Long orderId, String errorMessage) {
+        Order order = orderRepo.findById(orderId).orElse(null);
+        if (order != null) {
+            order.setPaymentStatus("FAILED");
+            order.setStatus("CANCELLED");
+            orderRepo.save(order);
+
+            PaymentVerificationRequest req = new PaymentVerificationRequest();
+            req.setOrderId(orderId);
+            req.setRazorpayOrderId(order.getRazorpayOrderId());
+
+            savePaymentTransaction(orderId, req, "FAILED", errorMessage, order.getTotalAmount());
+        }
+    }
+
+    /**
      * Persists transaction details in the Payment table.
      * Runs in a new transaction to guarantee persistence of logs.
      */

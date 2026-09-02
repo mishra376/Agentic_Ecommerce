@@ -48,4 +48,22 @@ public class PaymentController {
             ));
         }
     }
+
+    @PostMapping("/fail")
+    public ResponseEntity<?> reportPaymentFailure(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> payload
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+        try {
+            Long orderId = Long.valueOf(payload.get("orderId").toString());
+            String errorMessage = payload.getOrDefault("errorMessage", "Payment failed or cancelled by user").toString();
+            paymentService.reportPaymentFailure(orderId, errorMessage);
+            return ResponseEntity.ok(Map.of("status", "CANCELLED", "message", "Payment failure recorded cleanly"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "ERROR", "message", e.getMessage()));
+        }
+    }
 }

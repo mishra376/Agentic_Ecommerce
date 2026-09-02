@@ -40,18 +40,19 @@ public class OrderAgent {
             Your job is to handle the entire order lifecycle: preparing orders, confirming them, cancelling them, and showing order history.
 
             CRITICAL ORDER FLOW — Follow these steps exactly:
-            1. When asked to prepare an order, use `prepareOrder` with the product ID, shipping address, payment method, and quantity.
+            1. When asked to prepare an order, use `prepareOrder` with the product ID, shipping address, and quantity.
                - If no shipping address is specified, or the user wants their default address, set shippingAddress to "default".
-               - Collect or use the provided payment method (e.g., "COD", "UPI", "RAZORPAY").
-            2. After preparing, return the order summary clearly. Do NOT confirm automatically.
-            3. Only call `confirmOrder` when explicitly told the user has confirmed.
-            4. Only call `cancelOrder` when explicitly told the user wants to cancel.
-            5. For order history, use `getOrderHistory`.
-            6. Use `getUserAddresses` to look up the user's registered addresses when needed.
+               - Unless user explicitly specified COD or RAZORPAY upfront, default paymentMethod to "PENDING_SELECTION".
+            2. After preparing, return the order summary clearly. Ask the user to choose their payment method: **COD (Cash on Delivery)** or **Razorpay**.
+            3. When the user confirms and/or specifies their payment choice (e.g. "Razorpay", "COD"), call `confirmOrder(userId, paymentMethod)` passing "RAZORPAY" or "COD".
+            4. If user chose Razorpay, the order will be created and the Razorpay payment window will automatically launch for payment.
+            5. Only call `cancelOrder` when explicitly told the user wants to cancel.
+            6. For order history, use `getOrderHistory`.
+            7. Use `getUserAddresses` to look up the user's registered addresses when needed.
 
             IMPORTANT:
             - NEVER confirm an order without explicit user confirmation.
-            - Always include the order summary with product names, quantities, prices, shipping address, and payment method.
+            - Always include the order summary with product names, quantities, prices, shipping address, and payment options (**COD** or **Razorpay**).
             - The userId is passed as part of your task description. Use it for all operations.
 
             Return raw results. The orchestrator will format the final user-facing message.
@@ -133,11 +134,11 @@ public class OrderAgent {
             return results;
         }
 
-        @Tool(description = "Prepare an order for a user WITHOUT placing it. Validates product, checks stock, resolves shipping address, and returns an order summary for user confirmation. The order is NOT placed yet. After this, present the summary and wait for user confirmation before calling confirmOrder.")
+        @Tool(description = "Prepare an order for a user WITHOUT placing it. Validates product, checks stock, resolves shipping address, and returns an order summary. Prompts the user to select payment method: COD or RAZORPAY.")
         public String prepareOrder(
                 @ToolParam(description = "The user's ID.") Long userId,
                 @ToolParam(description = "Shipping address string, or 'default' to use user's default address.") String shippingAddress,
-                @ToolParam(description = "Payment method: COD, UPI, RAZORPAY, etc.") String paymentMethod,
+                @ToolParam(description = "Payment method if specified (e.g. COD or RAZORPAY), otherwise 'PENDING_SELECTION'.") String paymentMethod,
                 @ToolParam(description = "List of items to order. Each item has mongodbProductId and quantity.") List<OrderItemInput> items) {
             System.out.println(">>> [OrderAgent Tool] prepareOrder invoked for userId: " + userId);
             try {
@@ -155,6 +156,8 @@ public class OrderAgent {
                     resolvedAddress = defaultAddress.getStreetAddress() + ", " + defaultAddress.getCity()
                             + ", " + defaultAddress.getState() + " " + defaultAddress.getZipCode();
                 }
+
+                String selectedMethod = (paymentMethod != null && !paymentMethod.isBlank()) ? paymentMethod : "PENDING_SELECTION";
 
                 // Validate products and calculate total
                 double totalAmount = 0.0;
@@ -179,35 +182,40 @@ public class OrderAgent {
 
                 summaryBuilder.append("\n**Total Amount:** ₹").append(String.format("%,.2f", totalAmount));
                 summaryBuilder.append("\n**Shipping Address:** ").append(resolvedAddress);
-                summaryBuilder.append("\n**Payment Method:** ").append(paymentMethod);
 
                 String summary = summaryBuilder.toString();
 
                 // Store the pending preparation in memory
                 PendingOrderPreparation preparation = new PendingOrderPreparation(
-                        resolvedAddress, paymentMethod, items, summary
+                        resolvedAddress, selectedMethod, items, summary
                 );
                 pendingOrders.put(userId, preparation);
 
-                System.out.println(">>> [OrderAgent Tool] Order prepared for userId: " + userId + ". Awaiting confirmation.");
-                return summary + "\n\nPlease ask the user to confirm this order. Call confirmOrder when the user says yes. If the user says no or wants to cancel, call cancelOrder.";
+                System.out.println(">>> [OrderAgent Tool] Order prepared for userId: " + userId + ". Awaiting payment method & confirmation.");
+                return summary + "\n\nPlease ask the user to select their payment method: **COD (Cash on Delivery)** or **Razorpay**, and confirm the order.";
             } catch (Exception e) {
                 return "Error: Failed to prepare order. " + e.getMessage();
             }
         }
 
-        @Tool(description = "Confirm and place a previously prepared order. Only call this AFTER the user has explicitly confirmed they want to place the order.")
+        @Tool(description = "Confirm and place a previously prepared order. Accepts paymentMethod parameter: 'COD' or 'RAZORPAY'. If user chose Razorpay, this triggers the Razorpay payment window.")
         public String confirmOrder(
-                @ToolParam(description = "The user's ID.") Long userId) {
-            System.out.println(">>> [OrderAgent Tool] confirmOrder invoked for userId: " + userId);
+                @ToolParam(description = "The user's ID.") Long userId,
+                @ToolParam(description = "Payment method specified by user: 'COD' or 'RAZORPAY'. Defaults to 'RAZORPAY' if user wants online payment.") String paymentMethod) {
+            System.out.println(">>> [OrderAgent Tool] confirmOrder invoked for userId: " + userId + " with paymentMethod: " + paymentMethod);
             PendingOrderPreparation preparation = pendingOrders.remove(userId);
             if (preparation == null) {
                 return "Error: No pending order found to confirm. Please prepare an order first using prepareOrder.";
             }
             try {
+                String finalPaymentMethod = (paymentMethod != null && !paymentMethod.isBlank()) ? paymentMethod.toUpperCase().trim() : preparation.paymentMethod;
+                if ("PENDING_SELECTION".equalsIgnoreCase(finalPaymentMethod) || finalPaymentMethod.isBlank()) {
+                    finalPaymentMethod = "RAZORPAY"; // default fallback for confirmation
+                }
+
                 OrderRequest orderRequest = new OrderRequest();
                 orderRequest.setShippingAddress(preparation.shippingAddress);
-                orderRequest.setPaymentMethod(preparation.paymentMethod);
+                orderRequest.setPaymentMethod(finalPaymentMethod);
 
                 List<OrderRequest.OrderItemDto> dtoList = new ArrayList<>();
                 for (OrderItemInput item : preparation.items) {
@@ -219,14 +227,16 @@ public class OrderAgent {
                 orderRequest.setItems(dtoList);
 
                 Order order = orderServices.placeOrder(userId, orderRequest);
-                String response = "Order placed successfully! Order ID: " + order.getId()
+                String response = "Order placed successfully! Order ID: #" + order.getId()
                         + ", Total Amount: ₹" + String.format("%,.2f", order.getTotalAmount())
-                        + ", Shipped to: " + order.getShippingAddress()
+                        + ", Shipping Address: " + order.getShippingAddress()
                         + ", Payment Method: " + order.getPaymentMethod()
-                        + ", Status: " + order.getStatus() + ".";
+                        + ", Order Status: " + order.getStatus() + ".";
                 if ("RAZORPAY".equalsIgnoreCase(order.getPaymentMethod()) && order.getRazorpayOrderId() != null) {
-                    response += " Please complete your payment using Razorpay Order ID: " + order.getRazorpayOrderId()
-                            + ". The client should launch checkout and invoke verify API `/api/payment/verify` upon completion.";
+                    response += "\n\n[PAY_WITH_RAZORPAY: orderId=" + order.getId()
+                            + ", razorpayOrderId=" + order.getRazorpayOrderId()
+                            + ", amount=" + String.format(java.util.Locale.US, "%.2f", order.getTotalAmount())
+                            + ", autoOpen=true]";
                 }
                 System.out.println(">>> [OrderAgent Tool] Order confirmed and placed. Order ID: " + order.getId());
                 return response;

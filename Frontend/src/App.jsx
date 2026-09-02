@@ -57,6 +57,54 @@ export default function App() {
     return () => clearInterval(interval);
   }, [token]);
 
+  // Listen for Razorpay payment success / failure events to push order confirmation messages into chat
+  useEffect(() => {
+    const handleSuccess = (e) => {
+      const { orderId, amount } = e.detail;
+      const successMessageText = `### 🎉 Payment Successful!
+
+**Order Summary:**
+- **Order ID:** \`#${orderId}\`
+- **Amount Paid:** ${amount}
+- **Payment Method:** Razorpay
+- **Status:** Paid & Processing
+
+Your order **#${orderId}** has been confirmed and is being prepared for dispatch!`;
+
+      const newMsg = { sender: 'assistant', text: successMessageText };
+      setChatSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId ? { ...s, messages: [...s.messages, newMsg] } : s
+        )
+      );
+    };
+
+    const handleFailure = (e) => {
+      const { orderId } = e.detail;
+      const failureMessageText = `### ❌ Payment Failed
+
+- **Order ID:** \`#${orderId}\`
+- **Status:** Cancelled
+
+Payment was not completed. Order **#${orderId}** has been cancelled and no charges were made.`;
+
+      const newMsg = { sender: 'assistant', text: failureMessageText };
+      setChatSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId ? { ...s, messages: [...s.messages, newMsg] } : s
+        )
+      );
+    };
+
+    window.addEventListener('razorpay-payment-success', handleSuccess);
+    window.addEventListener('razorpay-payment-failed', handleFailure);
+
+    return () => {
+      window.removeEventListener('razorpay-payment-success', handleSuccess);
+      window.removeEventListener('razorpay-payment-failed', handleFailure);
+    };
+  }, [activeSessionId]);
+
   const activeSession = chatSessions.find((s) => s.id === activeSessionId) || chatSessions[0];
   const messagesList = activeSession ? activeSession.messages : [];
 

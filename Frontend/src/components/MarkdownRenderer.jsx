@@ -1,11 +1,42 @@
 import React from 'react';
 import ProductCard from './ProductCard';
+import RazorpayCheckoutButton from './RazorpayCheckoutButton';
 
 export default function MarkdownRenderer({ text }) {
   if (!text) return null;
 
+  // Extract Razorpay tag: [PAY_WITH_RAZORPAY: orderId=X, razorpayOrderId=Y, amount=Z, autoOpen=true]
+  let razorpayData = null;
+  const razorpayTagRegex = /\[PAY_WITH_RAZORPAY:\s*orderId=([0-9]+),\s*razorpayOrderId=(order_[a-zA-Z0-9]+),\s*amount=([0-9.]+)(?:,\s*autoOpen=(true|false))?\]/i;
+  const rzpMatch = razorpayTagRegex.exec(text);
+
+  let cleanText = text;
+  if (rzpMatch) {
+    razorpayData = {
+      orderId: rzpMatch[1],
+      razorpayOrderId: rzpMatch[2],
+      amount: rzpMatch[3],
+      autoOpen: rzpMatch[4] === 'true' || true
+    };
+    cleanText = text.replace(razorpayTagRegex, '').trim();
+  } else {
+    // Fallback regex matching in case AI outputs plain text containing order & razorpay IDs
+    const orderIdMatch = /Order ID:\s*(\d+)/i.exec(text);
+    const rzpOrderIdMatch = /Razorpay Order ID:\s*(order_[a-zA-Z0-9]+)/i.exec(text) || /(order_[a-zA-Z0-9]{14,})/i.exec(text);
+    const amountMatch = /Total Amount:\s*₹?\s*([0-9,.]+)/i.exec(text);
+    if (orderIdMatch && rzpOrderIdMatch) {
+      const rawAmount = amountMatch ? amountMatch[1].replace(/,/g, '') : '0';
+      razorpayData = {
+        orderId: orderIdMatch[1],
+        razorpayOrderId: rzpOrderIdMatch[1],
+        amount: rawAmount,
+        autoOpen: true
+      };
+    }
+  }
+
   // Split by code blocks: ```[lang]\n[code]\n```
-  const parts = text.split(/(```[\s\S]*?```)/g);
+  const parts = cleanText.split(/(```[\s\S]*?```)/g);
 
   // Extract any product IDs from product links (/api/products/{id})
   const productIds = [];
@@ -22,11 +53,9 @@ export default function MarkdownRenderer({ text }) {
     <div className="markdown-content">
       {parts.map((part, index) => {
         if (part.startsWith('```') && part.endsWith('```')) {
-          // It's a code block
+          // Code block
           const lines = part.split('\n');
-          // Try to detect language
           const firstLine = lines[0];
-          const lang = firstLine.replace('```', '').trim();
           const code = lines.slice(1, -1).join('\n');
           return (
             <pre
@@ -56,7 +85,6 @@ export default function MarkdownRenderer({ text }) {
           lines.forEach((line, lineIndex) => {
             const trimmedLine = line.trim();
 
-            // List item: - text
             if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
               const content = trimmedLine.substring(2);
               currentList.push(
@@ -67,16 +95,13 @@ export default function MarkdownRenderer({ text }) {
             } else {
               flushList(lineIndex);
 
-              // Header: ### text
               if (trimmedLine.startsWith('### ')) {
                 renderedLines.push(
                   <h3 key={`h3-${lineIndex}`} className="text-[1.05rem] font-bold mt-4 mb-2 first:mt-0 text-left text-[#f3f4f6]">
                     {parseInline(trimmedLine.substring(4))}
                   </h3>
                 );
-              }
-              // Normal line
-              else if (trimmedLine !== '') {
+              } else if (trimmedLine !== '') {
                 renderedLines.push(
                   <p key={`p-${lineIndex}`} className="mb-3 text-left text-[#f3f4f6] last:mb-0 leading-relaxed">
                     {parseInline(line)}
@@ -90,6 +115,16 @@ export default function MarkdownRenderer({ text }) {
           return <React.Fragment key={index}>{renderedLines}</React.Fragment>;
         }
       })}
+
+      {/* Interactive Razorpay Checkout Button inside Chat Feed */}
+      {razorpayData && (
+        <RazorpayCheckoutButton
+          orderId={razorpayData.orderId}
+          razorpayOrderId={razorpayData.razorpayOrderId}
+          amount={razorpayData.amount}
+          autoOpen={razorpayData.autoOpen}
+        />
+      )}
 
       {/* Dynamic Product Catalog listings below search result */}
       {productIds.length > 0 && (
@@ -110,7 +145,6 @@ export default function MarkdownRenderer({ text }) {
 
 // Inline parser for **bold**, `code`, and [link text](url)
 function parseInline(text) {
-  // Regex to split by bold (**text**), inline code (`text`), and markdown links ([text](url))
   const parts = text.split(/(\*\*.*?\*\*|`.*?`|\[[^\]]+\]\([^)]+\))/g);
 
   return parts.map((part, index) => {
@@ -128,7 +162,6 @@ function parseInline(text) {
         const linkText = match[1];
         const url = match[2];
 
-        // Style product links cleaner
         if (url.startsWith('/api/products/')) {
           return (
             <a
