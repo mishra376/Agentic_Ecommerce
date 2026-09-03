@@ -18,7 +18,7 @@ export default function ChatFeed({ messagesList, isTyping }) {
           How can I help you today?
         </h1>
         <p className="text-zinc-400 text-[0.88rem] max-w-[420px] mx-auto leading-relaxed">
-          Query catalog database products, search prices, or onboarding endpoints using plain text queries.
+          Search for products, check prices, or ask for help with placing your orders.
         </p>
       </div>
     );

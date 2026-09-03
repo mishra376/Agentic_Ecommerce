@@ -25,7 +25,7 @@ export default function ChatInput({
             type="text" 
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ask E-Commerce AI..." 
+            placeholder="Ask anything or search products..." 
             autoComplete="off"
             className="flex-1 bg-transparent border-none outline-none text-white px-3 py-2.5 text-[0.9rem]"
           />
@@ -38,9 +38,6 @@ export default function ChatInput({
           </button>
         </div>
       </form>
-      <div className="text-center text-zinc-500 text-[0.68rem] mt-2">
-        Spring Boot Console API Engine
-      </div>
     </div>
   );
 }

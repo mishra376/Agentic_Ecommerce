@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AuthForm from './components/auth/AuthForm';
-import Sidebar from './components/layout/Sidebar';
-import Header from './components/layout/Header';
-import ChatFeed from './components/chat/ChatFeed';
-import ChatInput from './components/chat/ChatInput';
+import Navbar from './components/layout/Navbar';
+import SingleChatView from './components/chat/SingleChatView';
+import ProfileView from './components/profile/ProfileView';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRoute from './components/auth/PublicRoute';
 
@@ -18,44 +17,10 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Chat states
-  const [chatSessions, setChatSessions] = useState([
-    { id: 1, title: 'E-Commerce Guide', messages: [] }
-  ]);
-  const [activeSessionId, setActiveSessionId] = useState(1);
+  // Single Chat state
+  const [messagesList, setMessagesList] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [backendStatus, setBackendStatus] = useState('checking'); // checking | active | inactive
-
-  // Poll backend health status
-  useEffect(() => {
-    const checkStatus = () => {
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ message: 'ping' })
-      })
-      .then((res) => {
-        if (res.ok) {
-          setBackendStatus('active');
-        } else {
-          setBackendStatus('inactive');
-        }
-      })
-      .catch(() => {
-        setBackendStatus('inactive');
-      });
-    };
-
-    checkStatus();
-    const interval = setInterval(checkStatus, 15000); // Check status every 15 seconds
-    return () => clearInterval(interval);
-  }, [token]);
 
   // Listen for Razorpay payment success / failure events to push order confirmation messages into chat
   useEffect(() => {
@@ -69,14 +34,10 @@ export default function App() {
 - **Payment Method:** Razorpay
 - **Status:** Paid & Processing
 
-Your order **#${orderId}** has been confirmed and is being prepared for dispatch!`;
+Your order **#${orderId}** has been confirmed and is being prepared for dispatch! View order details in your profile.`;
 
       const newMsg = { sender: 'assistant', text: successMessageText };
-      setChatSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId ? { ...s, messages: [...s.messages, newMsg] } : s
-        )
-      );
+      setMessagesList((prev) => [...prev, newMsg]);
     };
 
     const handleFailure = (e) => {
@@ -84,16 +45,12 @@ Your order **#${orderId}** has been confirmed and is being prepared for dispatch
       const failureMessageText = `### ❌ Payment Failed
 
 - **Order ID:** \`#${orderId}\`
-- **Status:** Cancelled
+- **Status:** Cancelled / Failed
 
-Payment was not completed. Order **#${orderId}** has been cancelled and no charges were made.`;
+Payment was not completed. Order **#${orderId}** has been marked as failed and no charges were incurred.`;
 
       const newMsg = { sender: 'assistant', text: failureMessageText };
-      setChatSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId ? { ...s, messages: [...s.messages, newMsg] } : s
-        )
-      );
+      setMessagesList((prev) => [...prev, newMsg]);
     };
 
     window.addEventListener('razorpay-payment-success', handleSuccess);
@@ -103,31 +60,7 @@ Payment was not completed. Order **#${orderId}** has been cancelled and no charg
       window.removeEventListener('razorpay-payment-success', handleSuccess);
       window.removeEventListener('razorpay-payment-failed', handleFailure);
     };
-  }, [activeSessionId]);
-
-  const activeSession = chatSessions.find((s) => s.id === activeSessionId) || chatSessions[0];
-  const messagesList = activeSession ? activeSession.messages : [];
-
-  // Create new chat session
-  const handleNewChat = () => {
-    const newId = Date.now();
-    const newSession = {
-      id: newId,
-      title: 'New Chat',
-      messages: []
-    };
-    setChatSessions((prev) => [...prev, newSession]);
-    setActiveSessionId(newId);
-    setSidebarOpen(false);
-  };
-
-  // Clear current active chat feed
-  const handleClearChat = () => {
-    setChatSessions((prev) =>
-      prev.map((s) => (s.id === activeSessionId ? { ...s, messages: [] } : s))
-    );
-    setIsTyping(false);
-  };
+  }, []);
 
   // Logout handler
   const handleLogout = () => {
@@ -135,8 +68,7 @@ Payment was not completed. Order **#${orderId}** has been cancelled and no charg
     localStorage.removeItem('auth_user');
     setToken(null);
     setUser(null);
-    setChatSessions([{ id: 1, title: 'E-Commerce Guide', messages: [] }]);
-    setActiveSessionId(1);
+    setMessagesList([]);
     navigate('/login');
   };
 
@@ -154,27 +86,10 @@ Payment was not completed. Order **#${orderId}** has been cancelled and no charg
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    // Append user message to active session
+    // Append user message
     const userMsg = { sender: 'user', text: trimmed };
-    
-    // Update messages and potentially title if it is a new conversation
-    setChatSessions((prev) =>
-      prev.map((session) => {
-        if (session.id === activeSessionId) {
-          const updatedMsgs = [...session.messages, userMsg];
-          const isDefaultTitle = 
-            session.title === 'New Conversation' || 
-            session.title === 'New Chat' ||
-            session.title === 'E-Commerce Guide';
-          const newTitle = isDefaultTitle
-            ? (trimmed.length > 25 ? trimmed.substring(0, 22) + '...' : trimmed)
-            : session.title;
-          return { ...session, title: newTitle, messages: updatedMsgs };
-        }
-        return session;
-      })
-    );
-
+    const updatedMessages = [...messagesList, userMsg];
+    setMessagesList(updatedMessages);
     setInputValue('');
     setIsTyping(true);
 
@@ -186,12 +101,11 @@ Payment was not completed. Order **#${orderId}** has been cancelled and no charg
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Get current messages for the active session to send as history
-      const currentSession = chatSessions.find((s) => s.id === activeSessionId);
-      const historyMessages = currentSession ? currentSession.messages.map(m => ({
+      // Format history messages
+      const historyMessages = messagesList.map(m => ({
         sender: m.sender,
         text: m.text
-      })) : [];
+      }));
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -211,11 +125,7 @@ Payment was not completed. Order **#${orderId}** has been cancelled and no charg
         text: data.reply || 'Received an empty response from server.'
       };
 
-      setChatSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId ? { ...s, messages: [...s.messages, assistantMsg] } : s
-        )
-      );
+      setMessagesList((prev) => [...prev, assistantMsg]);
     } catch (err) {
       setIsTyping(false);
       
@@ -231,12 +141,7 @@ I was unable to reach the Spring Boot backend server at \`/api/chat\`.
 *Error details: ${err.message}*`;
 
       const errorMsg = { sender: 'assistant', text: errorHtml };
-
-      setChatSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId ? { ...s, messages: [...s.messages, errorMsg] } : s
-        )
-      );
+      setMessagesList((prev) => [...prev, errorMsg]);
     }
   };
 
@@ -252,57 +157,44 @@ I was unable to reach the Spring Boot backend server at \`/api/chat\`.
       />
 
       <Route 
-        path="/chat" 
+        path="/*" 
         element={
           <ProtectedRoute token={token}>
-            <div className="flex h-screen w-screen relative overflow-hidden bg-[#18181b] text-[#f4f4f5]">
-              {/* Sidebar drawer back-overlay for mobile */}
-              {sidebarOpen && (
-                <div 
-                  className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300"
-                  onClick={() => setSidebarOpen(false)}
-                />
-              )}
-
-              {/* Sidebar navigation */}
-              <Sidebar 
-                chatSessions={chatSessions}
-                activeSessionId={activeSessionId}
-                setActiveSessionId={setActiveSessionId}
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-                backendStatus={backendStatus}
-                user={user}
-                onNewChat={handleNewChat}
-                onLogout={handleLogout}
+            <div className="flex flex-col h-screen w-screen relative overflow-hidden bg-[#18181b] text-[#f4f4f5]">
+              {/* Top Navigation Bar */}
+              <Navbar 
+                user={user} 
+                onLogout={handleLogout} 
               />
 
-              {/* Main Chat Workspace */}
-              <main className="flex-1 flex flex-col h-full bg-[#18181b] relative">
-                
-                {/* Header (contains mobile & desktop templates) */}
-                <Header 
-                  setSidebarOpen={setSidebarOpen}
-                  onClearChat={handleClearChat}
-                  canClear={messagesList.length > 0}
-                />
-
-                {/* Message Window Container */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col">
-                  <ChatFeed 
-                    messagesList={messagesList}
-                    isTyping={isTyping}
+              {/* Page Contents */}
+              <main className="flex-1 flex overflow-hidden">
+                <Routes>
+                  <Route 
+                    path="/chat" 
+                    element={
+                      <SingleChatView 
+                        messagesList={messagesList}
+                        inputValue={inputValue}
+                        setInputValue={setInputValue}
+                        onSendMessage={handleSendMessage}
+                        isTyping={isTyping}
+                      />
+                    } 
                   />
-                </div>
 
-                {/* Input box form */}
-                <ChatInput 
-                  inputValue={inputValue}
-                  setInputValue={setInputValue}
-                  onSendMessage={handleSendMessage}
-                  isTyping={isTyping}
-                />
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <ProfileView 
+                        user={user} 
+                        token={token} 
+                      />
+                    } 
+                  />
 
+                  <Route path="*" element={<Navigate to="/chat" replace />} />
+                </Routes>
               </main>
 
               {/* Embedded CSS animation for bubble entry and typing bounces */}
@@ -326,10 +218,6 @@ I was unable to reach the Spring Boot backend server at \`/api/chat\`.
           </ProtectedRoute>
         } 
       />
-
-      {/* Fallback routing */}
-      <Route path="/" element={<Navigate to="/chat" replace />} />
-      <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>
   );
 }
